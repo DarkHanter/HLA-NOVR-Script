@@ -56,6 +56,30 @@ pickup_ev = ListenToGameEvent('physgun_pickup', function(info)
     DoEntFireByInstanceHandle(ent, "RunScriptFile", "useextra", 0, nil, nil)
 end, nil)
 
+Convars:RegisterCommand("shootvortenergy", function()
+    local player = Entities:GetLocalPlayer()
+    local startVector = player:EyePosition()
+    local traceTable =
+    {
+        startpos = startVector;
+        endpos = startVector + RotatePosition(Vector(0,0,0), player:GetAngles(), Vector(1000000, 0, 0));
+        ignore = player;
+        mask =  33636363
+    }
+
+    TraceLine(traceTable)
+
+    if traceTable.hit then
+        ent = SpawnEntityFromTableSynchronous("env_explosion", {["origin"]=traceTable.pos.x .. " " .. traceTable.pos.y .. " " .. traceTable.pos.z, ["explosion_type"]="custom", ["explosion_custom_effect"]="particles/vortigaunt_fx/vort_beam_explosion_i_big.vpcf"})
+        DoEntFireByInstanceHandle(ent, "Explode", "", 0, nil, nil)
+        ent = SpawnEntityFromTableSynchronous("env_explosion", {["origin"]=startVector.x .. " " .. startVector.y .. " " .. startVector.z - 10, ["explosion_type"]="custom", ["explosion_custom_effect"]="particles/vortigaunt_fx/inner_vault_vort_beam_02b.vpcf"})
+        DoEntFireByInstanceHandle(ent, "Explode", "", 0, nil, nil)
+        SendToConsole("npc_kill")
+        DoEntFire("!picker", "RunScriptFile", "vortenergyhit", 0, nil, nil)
+        StartSoundEventFromPosition("VortMagic.Throw", startVector)
+    end
+end, "", 0)
+
 Convars:RegisterCommand("useextra", function()
     local player = Entities:GetLocalPlayer()
     if not player:IsUsePressed() then
@@ -349,6 +373,9 @@ player_spawn_ev = ListenToGameEvent('player_activate', function(info)
                     SendToConsole("ent_fire health_trap_locked_door Unlock")
                     SendToConsole("ent_fire 589_toner_port_5 Disable")
                     SendToConsole("@prop_phys_portaloo_door DisablePickup")
+                elseif GetMapName() == "a5_vault" then
+                    ent = Entities:FindByName(nil, "longcorridor_outerdoor1")
+                    ent:RedirectOutput("OnFullyClosed", "GiveVortEnergy", ent)
                 end
             end
         end
@@ -461,4 +488,8 @@ end
 function CrouchThroughZooHole(a, b)
     SendToConsole("fadein 0.2")
     SendToConsole("setpos 5393 -1960 -125")
+end
+
+function GiveVortEnergy(a, b)
+    SendToConsole("bind MOUSE1 shootvortenergy")
 end
